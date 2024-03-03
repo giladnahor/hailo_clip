@@ -1,7 +1,7 @@
 import os
 import re
 batch_size = 8
-
+video_sink = "xvimagesink"
 # Note: only 16:9 resolutions are supported
 # RES_X = 1920
 # RES_Y = 1080
@@ -16,10 +16,6 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
     
     hailopython_path = os.path.join(current_path, "clip_app/clip_hailopython.py")
     
-    #aspect ratio fix available for python and cpp
-    python_aspect_fix_path = os.path.join(current_path, "clip_app/aspect_ratio_fix.py")
-    cpp_aspect_fix_path = os.path.join(RESOURCES_DIR, "libaspect_ratio_fix.so")
-
     if (detector_pipeline == "fast_sam"):    
         # FASTSAM
         # DETECTION_HEF_PATH = os.path.join(RESOURCES_DIR, "fast_sam_s.hef")
@@ -69,12 +65,6 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
             SOURCE_PIPELINE = pipeline_str = f"uridecodebin uri={input_uri} ! {QUEUE()} ! videoscale ! {QUEUE()} "
     SOURCE_PIPELINE += f'! video/x-raw, width={RES_X}, height={RES_Y}, format=RGB ! {QUEUE()} name=src_convert_queue ! videoconvert n-threads=2 '
     
-    # Aspect ratio fix available for python and cpp
-    # ASPECT_FIX_PYTHON = f'hailopython name=pyaspect function=fix_16_9 module={python_aspect_fix_path} qos=false '
-    ASPECT_FIX_PYTHON = f'hailopython name=pyaspect module={python_aspect_fix_path} qos=false '
-    ASPECT_FIX_CPP = f'hailofilter name=cpp_aspect function-name=fix_16_9 so-path={cpp_aspect_fix_path} qos=false '
-    ASPECT_FIX = ASPECT_FIX_PYTHON
-
     DETECTION_PIPELINE = f'{QUEUE()} name=pre_detection_scale ! videoscale n-threads=4 qos=false ! \
         {QUEUE()} name=pre_detecion_net ! \
         video/x-raw, pixel-aspect-ratio=1/1 ! \
@@ -83,8 +73,7 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
         {QUEUE()} name=pre_detecion_post ! \
         {DETECTION_POST_PIPE} ! \
         {QUEUE()}'
-        # {ASPECT_FIX} ! \
-        # {QUEUE()}'
+
     
     CLIP_PIPELINE = f'{QUEUE()} name=pre_clip_net ! \
         hailonet hef-path={clip_hef_path} batch-size={batch_size} vdevice-key={DEFAULT_VDEVICE_KEY} \
@@ -141,7 +130,7 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
 
     # Display pipelines
     CLIP_DISPLAY_PIPELINE = f'{QUEUE()} ! videoconvert n-threads=2 ! \
-                            fpsdisplaysink name=hailo_display sync={sync} text-overlay=true '
+                            fpsdisplaysink name=hailo_display video-sink={video_sink} sync={sync} text-overlay=true '
 
     # Text to image matcher
     CLIP_PYTHON_MATCHER = f'hailopython name=pyproc module={hailopython_path} qos=false '

@@ -1,6 +1,7 @@
 import os
 import re
 batch_size = 8
+video_sink = "xvimagesink"
 
 # Note: only 16:9 resolutions are supported
 # RES_X = 1920
@@ -15,7 +16,6 @@ def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_
     STREAM_ID_SO = os.path.join(POSTPROCESS_DIR, "libstream_id_tool.so")
     ADD_STREAM_ID_PATH = os.path.join(current_path, "add_stream_id.py")
     hailopython_path = os.path.join(current_path, "clip_app/clip_hailopython_multi.py")
-    aspect_fix_path = os.path.join(current_path, "clip_app/aspect_ratio_fix.py")
     
     if (detector_pipeline == "fast_sam"):    
         # FASTSAM
@@ -60,7 +60,6 @@ def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_
     
     RATE_PIPELINE = f' {QUEUE()} name=rate_queue ! video/x-raw, framerate=30/1 '
     
-    #ASPECT_FIX = f'hailopython name=pyaspect function=fix_16_9 module={aspect_fix_path} qos=false '
     DETECTION_PIPELINE = f'{QUEUE()} name=pre_detecion_net ! \
         video/x-raw, pixel-aspect-ratio=1/1 ! \
         hailonet hef-path={hef_path} batch-size={batch_size} vdevice-key={DEFAULT_VDEVICE_KEY} \
@@ -124,7 +123,7 @@ def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_
 
     # Display pipelines
     CLIP_DISPLAY_PIPELINE = f'{QUEUE()} ! \
-                            fpsdisplaysink name=hailo_display sync={sync} text-overlay=true '
+                            fpsdisplaysink name=hailo_display video-sink={video_sink} sync={sync} text-overlay=true '
     
     def CLIP_SMALL_DISPLAY_PIPELINE(i):
         return f'{QUEUE()} ! videoscale ! \
