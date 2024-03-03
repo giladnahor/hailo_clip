@@ -14,6 +14,7 @@ if is_sourced; then
 
     if [ -z "$TAPPAS_WORKSPACE" ]; then
         echo "Error: TAPPAS_WORKSPACE could not be determined."
+        echo "Make sure PKG_CONFIG_PATH includes /opt/hailo/tappas/pkgconfig/"
         return 1 # Use 'return' instead of 'exit' to not exit the user's shell
     fi
 
