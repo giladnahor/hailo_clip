@@ -55,9 +55,8 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
     RATE_PIPELINE = f' {QUEUE()} name=rate_queue ! video/x-raw, framerate=30/1 '
     # Check if the input seems like a v4l2 device path (e.g., /dev/video0)
     if re.match(r'/dev/video\d+', input_uri):
-        SOURCE_PIPELINE = f'v4l2src device={input_uri} ! image/jpeg, width={RES_X}, height={RES_Y} ! decodebin !  video/x-raw, width={RES_X}, height={RES_Y}, format=RGB ! {QUEUE()} ! videoflip video-direction=horiz '
-        # For CSI (RPi) cameras, use the following pipeline instead:
-        # SOURCE_PIPELINE = f'v4l2src device={input_uri} ! {RATE_PIPELINE} ! videoflip video-direction=horiz '
+        SOURCE_PIPELINE = f'v4l2src device={input_uri} ! image/jpeg, framerate=30/1 ! decodebin ! {QUEUE()} ! \
+            videoconvert ! {QUEUE()} ! videoscale ! video/x-raw, width={RES_X}, height={RES_Y}, format=RGB ! {QUEUE()} ! videoflip video-direction=horiz '
     else:
         if re.match(r'0x\w+', input_uri): # Window ID - get from xwininfo
             SOURCE_PIPELINE = pipeline_str = f"ximagesrc xid={input_uri} ! {QUEUE()} ! videoscale ! {QUEUE()} "
