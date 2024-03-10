@@ -56,13 +56,16 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
     # Check if the input seems like a v4l2 device path (e.g., /dev/video0)
     if re.match(r'/dev/video\d+', input_uri):
         SOURCE_PIPELINE = f'v4l2src device={input_uri} ! image/jpeg, framerate=30/1 ! decodebin ! {QUEUE()} ! \
-            videoconvert ! {QUEUE()} ! videoscale ! video/x-raw, width={RES_X}, height={RES_Y}, format=RGB ! {QUEUE()} ! videoflip video-direction=horiz '
+            videoconvert ! {QUEUE()} ! videoscale ! video/x-raw, width={RES_X}, height={RES_Y}, format=RGB ! {QUEUE()} ! videoflip video-direction=horiz ! '
     else:
         if re.match(r'0x\w+', input_uri): # Window ID - get from xwininfo
-            SOURCE_PIPELINE = pipeline_str = f"ximagesrc xid={input_uri} ! {QUEUE()} ! videoscale ! {QUEUE()} "
+            SOURCE_PIPELINE = f"ximagesrc xid={input_uri} ! {QUEUE()} ! videoscale ! "
         else:
-            SOURCE_PIPELINE = pipeline_str = f"uridecodebin uri={input_uri} ! {QUEUE()} ! videoscale ! {QUEUE()} "
-    SOURCE_PIPELINE += f'! video/x-raw, width={RES_X}, height={RES_Y}, format=RGB ! {QUEUE()} name=src_convert_queue ! videoconvert n-threads=2 '
+            # convert the file to a uri
+            input_uri = os.path.abspath(input_uri)
+            input_uri = f'file://{input_uri}'
+            SOURCE_PIPELINE = f"uridecodebin uri={input_uri} ! {QUEUE()} ! videoscale ! "
+    SOURCE_PIPELINE += f'{QUEUE()} name=src_convert_queue ! videoconvert n-threads=2 ! video/x-raw, width={RES_X}, height={RES_Y}, format=RGB '
     
     DETECTION_PIPELINE = f'{QUEUE()} name=pre_detection_scale ! videoscale n-threads=4 qos=false ! \
         {QUEUE()} name=pre_detecion_net ! \
@@ -94,14 +97,14 @@ def get_pipeline(current_path, detector_pipeline, sync, input_uri, tappas_worksp
                 keep-new-frames=2 keep-tracked-frames=15 keep-lost-frames=2 keep-past-metadata=true qos=false ! \
                 {QUEUE()} '
     
-    # DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 name=pre_detection_tee ! tee name=detection_t hailomuxer name=hmux \
+    # DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 ! tee name=detection_t hailomuxer name=hmux \
     #     detection_t. ! {QUEUE(buffer_size=20, name="detection_bypass_q")} ! hmux.sink_0 \
     #     detection_t. ! {DETECTION_PIPELINE} ! hmux.sink_1 \
     #     hmux. ! {QUEUE()} '
     
     WHOLE_BUFFER_CROP_SO = os.path.join(POSTPROCESS_DIR, "cropping_algorithms/libwhole_buffer.so")
     
-    DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 name=pre_detection_tee ! \
+    DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 ! \
         hailocropper  name=detection_crop so-path={WHOLE_BUFFER_CROP_SO} function-name=create_crops use-letterbox=true resize-method=inter-area internal-offset=true \
         hailoaggregator name=agg1 \
         detection_crop. ! {QUEUE(buffer_size=20, name="detection_bypass_q")} ! agg1.sink_0 \
