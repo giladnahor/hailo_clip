@@ -8,6 +8,12 @@ As default the app starts w/o enabling online test embeddings. This is done to s
 ## Prerequisites
 This example was tested on Hailo's TAPPAS rpi_v3.27.0
 You'll need it installed on your system.
+
+#### These packages are required for the CLIP
+```
+sudo apt-get -y install libblas-dev \
+nlohmann-json3-dev nlohmann-json3-dev
+```
 ### hailo_tappas pkg_config
 This applications is using hailo_tapps pkg_config. 
 To test installation and setup envirounment run:
