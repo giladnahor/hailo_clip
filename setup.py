@@ -28,7 +28,7 @@ if not os.path.isfile("resources/yolov5s_personface.hef"):
 # Setup function
 setup(
     name='clip-app',
-    version='0.1',
+    version='0.2',
     author='Gilad Nahor',
     author_email='giladn@hailo.ai',
     description='Real time clip classication and detection',
