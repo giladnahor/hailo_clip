@@ -18,7 +18,6 @@ ClipParams *init(std::string config_path, std::string func_name)
 {
     if (config_path == "NULL")
     {
-        std::cout << "No config path provided for clip postprocess using default hailo_tracker " << std::endl;
         config_path = "hailo_tracker";
     }
     ClipParams *params = new ClipParams(config_path);
