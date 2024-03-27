@@ -88,14 +88,14 @@ def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_
                 keep-new-frames=2 keep-tracked-frames=35 keep-lost-frames=2 keep-past-metadata=true qos=false ! \
                 {QUEUE()} '
     
-    # DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 name=pre_detection_tee ! tee name=detection_t hailomuxer name=hmux \
+    # DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 ! tee name=detection_t hailomuxer name=hmux \
     #     detection_t. ! {QUEUE(buffer_size=20, name="detection_bypass_q")} ! hmux.sink_0 \
     #     detection_t. ! {DETECTION_PIPELINE} ! hmux.sink_1 \
     #     hmux. ! {QUEUE()} '
     
     WHOLE_BUFFER_CROP_SO = os.path.join(POSTPROCESS_DIR, "cropping_algorithms/libwhole_buffer.so")
     
-    DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 name=pre_detection_tee ! \
+    DETECTION_PIPELINE_MUXER = f'{QUEUE(buffer_size=12, name="pre_detection_tee")} max-size-buffers=12 ! \
         hailocropper  name=detection_crop so-path={WHOLE_BUFFER_CROP_SO} function-name=create_crops use-letterbox=true resize-method=inter-area internal-offset=true \
         hailoaggregator name=agg1 \
         detection_crop. ! {QUEUE(buffer_size=20, name="detection_bypass_q")} ! agg1.sink_0 \
