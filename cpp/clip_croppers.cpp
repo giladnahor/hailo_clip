@@ -85,7 +85,7 @@ bool track_update(HailoDetectionPtr detection, bool use_track_update, int TRACK_
  */
 
 std::vector<HailoROIPtr> object_crop(const std::shared_ptr<HailoMat>& image, const HailoROIPtr& roi, const std::string label=PERSON_LABEL, 
-int crop_every_x_frames=30, int max_crops_per_frame=2)
+int crop_every_x_frames=30, int max_crops_per_frame=5)
 {
     auto object_counter = 0;
     std::vector<HailoROIPtr> crop_rois;
@@ -128,15 +128,15 @@ int crop_every_x_frames=30, int max_crops_per_frame=2)
 
 std::vector<HailoROIPtr> face_cropper(std::shared_ptr<HailoMat> image, HailoROIPtr roi)
 {
-    return object_crop(image, roi, FACE_LABEL, 10, 2);
+    return object_crop(image, roi, FACE_LABEL, 15, 5);
 }
 
 std::vector<HailoROIPtr> person_cropper(std::shared_ptr<HailoMat> image, HailoROIPtr roi)
 {
-    return object_crop(image, roi, PERSON_LABEL, 10, 2);
+    return object_crop(image, roi, PERSON_LABEL, 15, 5);
 }
 
 std::vector<HailoROIPtr> object_cropper(std::shared_ptr<HailoMat> image, HailoROIPtr roi)
 {
-    return object_crop(image, roi, OBJECT_LABEL, 30, 1);
+    return object_crop(image, roi, OBJECT_LABEL, 30, 10);
 }

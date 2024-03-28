@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <mutex>
+#include <atomic>
 #include <nlohmann/json.hpp>
 #include <xtensor/xarray.hpp>
 #include <xtensor/xmath.hpp>
@@ -15,13 +16,12 @@
 #include <xtensor/xsort.hpp>
 #include <xtensor-blas/xlinalg.hpp>
 
-
 #ifndef TEXTIMAGEMATCHER_H
 #define TEXTIMAGEMATCHER_H
 
 // Usage:
 // To use the singleton instance of TextImageMatcher, you would call:
-// auto matcher = TextImageMatcher::getInstance("model_name", 0.5f, 5)
+// auto matcher = TextImageMatcher::getInstance("", 0.5f, 5)
 
 class TextEmbeddingEntry {
 public:
@@ -54,9 +54,9 @@ public:
 
 class TextImageMatcher {
 public:
-    std::string model_name = "RN50x4";
-    double threshold = 0.5;  // Use double for threshold
-    int max_entries = 5;
+    std::string model_name;
+    double threshold;  // Use double for threshold
+    int max_entries;
     bool run_softmax = true;
     std::vector<TextEmbeddingEntry> entries;
     std::string user_data = "";
@@ -70,27 +70,27 @@ private:
     // Prevent Copy Construction and Assignment
     TextImageMatcher(const TextImageMatcher&) = delete;
     TextImageMatcher& operator=(const TextImageMatcher&) = delete;
-    
+
     // Private Constructor
-    TextImageMatcher()
-    {
+    TextImageMatcher(std::string m_name, double thresh, int max_ents)
+        : model_name(m_name), threshold(thresh), max_entries(max_ents) {
         // Initialize entries with default TextEmbeddingEntry
         for (int i = 0; i < max_entries; ++i) {
             entries.push_back(TextEmbeddingEntry("", std::vector<float>(), false, false));
         }
     }
-
+    std::atomic<bool> m_debug;//When set outputs all matches overrides match(report_all = false)
 
 public:
     // Public Method to get the singleton instance
-    static TextImageMatcher* getInstance() {
+    static TextImageMatcher* getInstance(std::string model_name, float threshold, int max_entries) {
         std::lock_guard<std::mutex> lock(mutex); // Thread-safe in a multi-threaded environment
         if (instance == nullptr) {
-            instance = new TextImageMatcher();
+            instance = new TextImageMatcher(model_name, threshold, max_entries);
         }
         return instance;
     }
-    
+
     // Destructor
     ~TextImageMatcher() {
         // Cleanup code
@@ -141,20 +141,27 @@ public:
             }
         }
     }
+    void set_debug(bool debug) {
+        m_debug.store(debug);
+        std::cout << "Setting debug to: " << m_debug.load() << std::endl;
+    }
 
     std::vector<Match> match(const xt::xarray<double>& image_embedding_np, bool report_all = false) {
-        std::vector<Match> results;
+        
+        bool report_all_debug = report_all || m_debug.load();
 
+        std::vector<Match> results;
         // Ensure the input is a 2D array
         xt::xarray<double> image_embedding = image_embedding_np;
         if (image_embedding.dimension() == 1) {
-            image_embedding.reshape({1, -1});
+            image_embedding = image_embedding.reshape({1, -1});
         }
         // Getting valid entries
         std::vector<int> valid_entries = get_embeddings();
         if (valid_entries.empty()) {
             return results; // Return an empty list if no valid entries
         }
+        
         std::vector<xt::xarray<double>> to_stack;
         to_stack.reserve(valid_entries.size()); // Reserve memory in advance
 
@@ -164,9 +171,7 @@ public:
             for (size_t entry_idx : valid_entries) {
                 if (entry_idx < entries.size()) {
                     to_stack.push_back(entries[entry_idx].embedding);
-                } else {
-                    // Handle the error appropriately
-                }
+                } 
             }
 
             if (!to_stack.empty()) {
@@ -176,18 +181,22 @@ public:
                     xt::view(text_embeddings_np, i, xt::all()) = to_stack[i];
                 }
             }
-
         }
         
         // Looping through each image embedding
         for (std::size_t row_idx = 0; row_idx < image_embedding.shape()[0]; ++row_idx) {
             auto image_embedding_1d = xt::view(image_embedding, row_idx);
-            auto dot_products = xt::linalg::dot(text_embeddings_np, image_embedding_1d);
+            xt::xarray<double> dot_products = xt::linalg::dot(text_embeddings_np, image_embedding_1d);
             xt::xarray<double> similarities;
 
             if (run_softmax) {
                 similarities = xt::exp(100 * dot_products);
-                similarities /= xt::sum(similarities)();
+                double sum = xt::sum(similarities)();
+                if (sum != 0) {
+                    similarities /= sum;
+                } else {
+                    similarities = xt::zeros<double>({dot_products.size()});
+                }
             } else {
                 // These values are based on statistics collected for the RN50x4 model
                 similarities = (dot_products - 0.27) / (0.41 - 0.27);
@@ -211,10 +220,10 @@ public:
                             best_similarity > threshold);
 
             // Filtering results based on conditions
-            if (!report_all && new_match.negative) {
+            if (!report_all_debug && new_match.negative) {
                 continue;
             }
-            if (report_all || new_match.passed_threshold) {
+            if (report_all_debug || new_match.passed_threshold) {
                 results.push_back(new_match);
             }
         }
