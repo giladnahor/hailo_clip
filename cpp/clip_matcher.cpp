@@ -14,7 +14,7 @@
 
 #include "clip_matcher.hpp"
 #include "TextImageMatcher.hpp"
-TextImageMatcher* matcher = TextImageMatcher::getInstance();
+TextImageMatcher* matcher = TextImageMatcher::getInstance("", 0.8f, 6);
 
 static xt::xarray<float> get_xtensor(HailoMatrixPtr matrix)
 {
