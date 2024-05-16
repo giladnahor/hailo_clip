@@ -7,7 +7,6 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('Gst', '1.0')
 from gi.repository import Gtk, Gst, GLib
 
-from clip_app.get_pkg_info import get_pkg_info
 from clip_app.logger_setup import setup_logger, set_log_level
 
 from clip_app.clip_pipeline import get_pipeline
@@ -63,6 +62,11 @@ class AppWindow(Gtk.Window):
         self.current_path = os.path.dirname(self.current_path)
         os.environ["GST_DEBUG_DUMP_DOT_DIR"] = self.current_path
         
+        self.tappas_postprocess_dir = os.environ.get('TAPPAS_POST_PROC_DIR', '')
+        if self.tappas_postprocess_dir == '':
+            print("TAPPAS_POST_PROC_DIR environment variable is not set. Please set it to by sourcing setup_env.sh")
+            exit(1)
+        
         self.input_uri = args.input
         self.dump_dot = args.dump_dot
         if args.sync:
@@ -85,11 +89,6 @@ class AppWindow(Gtk.Window):
             if (self.detector != "person"):
                 print("Multi stream mode is enabled. Detector is set to person.")
             self.detector = "person"
-
-        # get TAPPAS version and path
-        info = get_pkg_info()
-        self.tappas_workspace = info['tappas_workspace']
-        self.tappas_version = info['version']
 
         # get current path
         Gst.init(None)
@@ -394,9 +393,9 @@ class AppWindow(Gtk.Window):
 
     def create_pipeline(self):
         if self.multi_stream:
-            pipeline_str = get_pipeline_multi(self.current_path, self.detector, self.sync, self.input_uri, self.tappas_workspace, self.tappas_version)
+            pipeline_str = get_pipeline_multi(self.current_path, self.detector, self.sync, self.input_uri, self.tappas_postprocess_dir)
         else:
-            pipeline_str = get_pipeline(self.current_path, self.detector, self.sync, self.input_uri, self.tappas_workspace, self.tappas_version)
+            pipeline_str = get_pipeline(self.current_path, self.detector, self.sync, self.input_uri, self.tappas_postprocess_dir)
         print(f'PIPELINE:\ngst-launch-1.0 {pipeline_str}')
         # run parse_launch and handle errors
         try:

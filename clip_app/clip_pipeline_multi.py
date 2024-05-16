@@ -9,10 +9,10 @@ video_sink = "xvimagesink"
 RES_X = {1280}
 RES_Y = {720}
 
-def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_workspace, tapppas_version):
+def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_postprocess_dir):
     # Initialize directories and paths
     RESOURCES_DIR = os.path.join(current_path, "resources")
-    POSTPROCESS_DIR = os.path.join(tappas_workspace, "apps/h8/gstreamer/libs/post_processes")
+    POSTPROCESS_DIR = tappas_postprocess_dir
     STREAM_ID_SO = os.path.join(POSTPROCESS_DIR, "libstream_id_tool.so")
     ADD_STREAM_ID_PATH = os.path.join(current_path, "add_stream_id.py")
     hailopython_path = os.path.join(current_path, "clip_app/clip_hailopython_multi.py")
@@ -63,14 +63,14 @@ def get_pipeline_multi(current_path, detector_pipeline, sync, input_uri, tappas_
     DETECTION_PIPELINE = f'{QUEUE()} name=pre_detecion_net ! \
         video/x-raw, pixel-aspect-ratio=1/1 ! \
         hailonet hef-path={hef_path} batch-size={batch_size} vdevice-key={DEFAULT_VDEVICE_KEY} \
-        multi-process-service=true scheduler-timeout-ms=100 scheduler-priority=31 ! \
+        multi-process-service=false scheduler-timeout-ms=100 scheduler-priority=31 ! \
         {QUEUE()} name=pre_detecion_post ! \
         {DETECTION_POST_PIPE} ! \
         {QUEUE()}'
     
     CLIP_PIPELINE = f'{QUEUE()} name=pre_clip_net ! \
         hailonet hef-path={clip_hef_path} batch-size={batch_size} vdevice-key={DEFAULT_VDEVICE_KEY} \
-        multi-process-service=true scheduler-timeout-ms=1000 ! \
+        multi-process-service=false scheduler-timeout-ms=1000 ! \
         {QUEUE()} ! \
         hailofilter so-path={clip_postprocess_so} qos=false ! \
         {QUEUE()}'
